@@ -18,9 +18,6 @@ import asyncio
 # Load environment variables
 load_dotenv()
 
-client_id = os.environ['GOOGLE_CLIENT_ID']
-client_secret = os.environ['GOOGLE_CLIENT_SECRET']
-redirect_uri = os.environ['REDIRECT_URI']
 co = cohere.Client(os.environ["COHERE_API_KEY"])
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
