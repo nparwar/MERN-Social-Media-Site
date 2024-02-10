@@ -19,6 +19,7 @@ from googleapiclient.errors import HttpError
 load_dotenv()
 
 co = cohere.Client(os.environ["COHERE_API_KEY"])
+SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
 
 def process_text(text):
@@ -59,8 +60,7 @@ def upload(events, creds):
         print(f"An error occurred: {error}")
 
 def main():
-    SCOPES = ["https://www.googleapis.com/auth/calendar"]
-    st.title("PDF Analyzer")
+    st.title("PDF Extractor")
 
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
@@ -74,7 +74,7 @@ def main():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-            os.environ["CREDENTIALS_LOCATION"], SCOPES
+            "../credentials.json", SCOPES
             )
             creds = flow.run_local_server(port=8080)
         # Save the credentials for the next run
