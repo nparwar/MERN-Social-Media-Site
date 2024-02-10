@@ -76,7 +76,22 @@ def main():
             flow = InstalledAppFlow.from_client_secrets_file(
             "credentials.json", SCOPES
             )
-            creds = flow.run_local_server(port=8080)
+            flow.redirect_uri = 'https://pdf-extractor.streamlit.app/'
+            # Generate the authorization URL
+            authorization_url, state = flow.authorization_url(
+                access_type='offline',
+                include_granted_scopes='true',
+                prompt='consent')
+
+            # Display the authorization URL to the user
+            st.markdown(f'Please authenticate using [this link]({authorization_url})', unsafe_allow_html=True)
+
+            # Capture the authorization code manually input by the user
+            auth_code = st.text_input('Enter the authorization code here:')
+
+            if auth_code:
+                # Exchange the code for a token
+                creds = flow.fetch_token(code=auth_code)
         # Save the credentials for the next run
         with open("token.json", "w") as token:
             token.write(creds.to_json())
