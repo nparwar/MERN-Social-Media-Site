@@ -74,7 +74,7 @@ def main():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-            "../credentials.json", SCOPES
+            "credentials.json", SCOPES
             )
             creds = flow.run_local_server(port=8080)
         # Save the credentials for the next run
