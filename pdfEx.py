@@ -12,12 +12,15 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-
+import asyncio
 
 
 # Load environment variables
 load_dotenv()
 
+client_id = os.environ['GOOGLE_CLIENT_ID']
+client_secret = os.environ['GOOGLE_CLIENT_SECRET']
+redirect_uri = os.environ['REDIRECT_URI']
 co = cohere.Client(os.environ["COHERE_API_KEY"])
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
@@ -63,40 +66,37 @@ def main():
     st.title("PDF Extractor")
 
     creds = None
-    # The file token.json stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
+    # Check if token.json exists
     if os.path.exists("token.json"):
         creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-            "credentials.json", SCOPES
-            )
-            flow.redirect_uri = 'https://pdf-extractor.streamlit.app/'
 
-        # Generate the authorization URL
-        authorization_url, state = flow.authorization_url(
-            access_type='offline',
-            include_granted_scopes='true')
+    # Try to refresh or fetch new token if needed
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+    else:
+        flow = Flow.from_client_secrets_file(
+            "credentials.json",
+            scopes=SCOPES,
+            redirect_uri="https://pdf-extractor.streamlit.app/"
+        )
 
-        # Prompt the user to visit the authorization URL
-        st.markdown(f'Please go to this URL and authorize access: [Authorize]({authorization_url})')
+        # Check if we are being redirected back with the code
+        query_params = st.experimental_get_query_params()
+        auth_url, _ = flow.authorization_url(prompt='consent')
+        st.write(f"Please go to this URL and authorize access: {auth_url}")
+        query_params = st.experimental_get_query_params()
+        
+            # Use the code from the query params to fetch the token
+        code = query_params['code'][0]  # Extract the code
+        flow.fetch_token(code=code)
+        creds = flow.credentials
+            # Save the credentials for future use
+        with open("token.json", "w") as token_file:
+            token_file.write(creds.to_json())
 
-        # Ask the user to enter the authorization code from the redirected URL
-        authorization_response = st.text_input('Enter the full callback URL you were redirected to:')
 
-        if authorization_response:
-            # Use the authorization response URL to fetch the token
-            flow.fetch_token(authorization_response=authorization_response)
-            creds = flow.credentials
 
-            # Save the credentials for the next run
-            with open("token.json", "w") as token_file:
-                token_file.write(creds.to_json())
+          
 
     pdf = st.file_uploader('Upload your PDF document', type='pdf')
 
