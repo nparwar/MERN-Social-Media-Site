@@ -9,17 +9,16 @@ import datetime
 import os.path
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow as Flow
+from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-import asyncio
+
 
 
 # Load environment variables
 load_dotenv()
 
 co = cohere.Client(os.environ["COHERE_API_KEY"])
-SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
 
 def process_text(text):
@@ -60,40 +59,27 @@ def upload(events, creds):
         print(f"An error occurred: {error}")
 
 def main():
-    st.title("PDF Extractor")
+    SCOPES = ["https://www.googleapis.com/auth/calendar"]
+    st.title("PDF Analyzer")
 
     creds = None
-    # Check if token.json exists
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
     if os.path.exists("token.json"):
         creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-
-    # Try to refresh or fetch new token if needed
-    if creds and creds.expired and creds.refresh_token:
-        creds.refresh(Request())
-    else:
-        flow = Flow.from_client_secrets_file(
-            "credentials.json",
-            scopes=SCOPES,
-            redirect_uri="https://pdf-extractor.streamlit.app/"
-        )
-
-        # Check if we are being redirected back with the code
-        query_params = st.experimental_get_query_params()
-        auth_url, _ = flow.authorization_url(prompt='consent')
-        st.write(f"Please go to this URL and authorize access: {auth_url}")
-        query_params = st.experimental_get_query_params()
-        
-            # Use the code from the query params to fetch the token
-        code = query_params['code'][0]  # Extract the code
-        flow.fetch_token(code=code)
-        creds = flow.credentials
-            # Save the credentials for future use
-        with open("token.json", "w") as token_file:
-            token_file.write(creds.to_json())
-
-
-
-          
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+            os.environ["CREDENTIALS_LOCATION"], SCOPES
+            )
+            creds = flow.run_local_server(port=8080)
+        # Save the credentials for the next run
+        with open("token.json", "w") as token:
+            token.write(creds.to_json())
 
     pdf = st.file_uploader('Upload your PDF document', type='pdf')
 
